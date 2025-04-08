@@ -1,4 +1,4 @@
-import { FundingRate } from '@/types/exchange';
+import { FundingRate, ArbitrageOpportunity } from '@/types/exchange';
 import axios from 'axios';
 
 export async function getFundingRates(symbol: string): Promise<FundingRate[]> {
@@ -6,7 +6,7 @@ export async function getFundingRates(symbol: string): Promise<FundingRate[]> {
   return response.data;
 }
 
-export function findArbitrageOpportunities(rates: FundingRate[]): any[] {
+export function findArbitrageOpportunities(rates: FundingRate[]): ArbitrageOpportunity[] {
   const opportunities = [];
   const exchanges = rates.map(rate => rate.exchange);
   
@@ -18,9 +18,11 @@ export function findArbitrageOpportunities(rates: FundingRate[]): any[] {
       
       if (rateDifference > 0.0001) { // 0.01% 的最小套利空间
         opportunities.push({
+          symbol: rates[i].symbol,
           buyExchange,
           sellExchange,
-          rateDifference
+          rateDifference,
+          timestamp: Date.now()
         });
       }
     }

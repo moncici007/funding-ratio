@@ -3,22 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getFundingRates, findArbitrageOpportunities } from '@/services/exchange';
-import { FundingRate } from '@/types/exchange';
-import { format } from 'date-fns';
-import { exchanges } from '@/config/exchanges';
-
-interface FundingRate {
-  exchange: string;
-  symbol: string;
-  rate: number;
-  timestamp: number;
-  nextFundingTime?: number;
-}
+import { FundingRate, ArbitrageOpportunity } from '@/types/exchange';
 
 export default function Home() {
   const [symbol, setSymbol] = useState('BTCUSDT');
   const [rates, setRates] = useState<FundingRate[]>([]);
-  const [opportunities, setOpportunities] = useState<any[]>([]);
+  const [opportunities, setOpportunities] = useState<ArbitrageOpportunity[]>([]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['fundingRates', symbol],
