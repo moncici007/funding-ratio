@@ -13,6 +13,9 @@ export interface ExchangeConfig {
     fundingRate: string;
   };
   symbolFormat: (symbol: string) => string;
+  method?: string;
+  headers?: Record<string, string>;
+  body?: Record<string, any>;
 }
 
 export interface ArbitrageOpportunity {

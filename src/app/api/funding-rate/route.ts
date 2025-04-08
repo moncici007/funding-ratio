@@ -3,56 +3,37 @@ import axios from 'axios';
 import { exchanges } from '@/config/exchanges';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 
-// 创建 axios 实例
-const createAxiosInstance = () => {
-  // 只在开发环境使用代理
-  if (process.env.NODE_ENV === 'development') {
-    const PROXY_CONFIG = {
-      host: process.env.PROXY_HOST,
-      port: parseInt(process.env.PROXY_PORT || '1337'),
-      auth: {
-        username: process.env.PROXY_USERNAME,
-        password: process.env.PROXY_PASSWORD
-      }
-    };
-
-    // 创建代理 agent
-    const httpsAgent = new HttpsProxyAgent(`http://${PROXY_CONFIG.auth.username}:${PROXY_CONFIG.auth.password}@${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`);
-
-    return axios.create({
-      httpsAgent,
-      proxy: false,
-      timeout: 30000,
-    });
+// 代理配置
+const PROXY_CONFIG = {
+  host: process.env.PROXY_HOST,
+  port: parseInt(process.env.PROXY_PORT || '1337'),
+  auth: {
+    username: process.env.PROXY_USERNAME,
+    password: process.env.PROXY_PASSWORD
   }
-
-  // 生产环境不使用代理
-  return axios.create({
-    timeout: 30000,
-  });
 };
 
-const axiosInstance = createAxiosInstance();
+// 创建代理 agent
+const httpsAgent = new HttpsProxyAgent(`http://${PROXY_CONFIG.auth.username}:${PROXY_CONFIG.auth.password}@${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`);
 
-// 添加请求拦截器
+// 创建带有详细日志的 axios 实例
+const axiosInstance = axios.create({
+  httpsAgent,
+  proxy: false,
+  timeout: 30000,
+});
+
 axiosInstance.interceptors.request.use(request => {
   console.log('发送请求:', {
     method: request.method,
     url: request.url,
     headers: request.headers,
-    proxy: process.env.NODE_ENV === 'development' ? {
-      host: process.env.PROXY_HOST,
-      port: process.env.PROXY_PORT,
-      auth: {
-        username: process.env.PROXY_USERNAME,
-        password: '******' // 隐藏密码
-      }
-    } : '不使用代理',
+    data: request.data,
+    proxy: PROXY_CONFIG,
   });
   return request;
 });
 
-// 添加响应拦截器
 axiosInstance.interceptors.response.use(
   response => {
     console.log('收到响应:', {
@@ -71,14 +52,8 @@ axiosInstance.interceptors.response.use(
         url: error.config?.url,
         method: error.config?.method,
         headers: error.config?.headers,
-        proxy: process.env.NODE_ENV === 'development' ? {
-          host: process.env.PROXY_HOST,
-          port: process.env.PROXY_PORT,
-          auth: {
-            username: process.env.PROXY_USERNAME,
-            password: '******' // 隐藏密码
-          }
-        } : '不使用代理',
+        data: error.config?.data,
+        proxy: PROXY_CONFIG,
       },
       response: error.response ? {
         status: error.response.status,
@@ -104,10 +79,17 @@ export async function GET(request: Request) {
     try {
       console.log(`开始请求 ${exchange.name} API: ${symbol}`);
       const formattedSymbol = exchange.symbolFormat(symbol);
-      const url = `${exchange.baseUrl}${exchange.endpoints.fundingRate}?symbol=${formattedSymbol}`;
+      const url = `${exchange.baseUrl}${exchange.endpoints.fundingRate}`;
       console.log(`完整 URL: ${url}`);
       
-      const response = await axiosInstance.get(url);
+      let response;
+      if (exchangeId === 'hyperliquid') {
+        response = await axiosInstance.post(url, exchange.body, {
+          headers: exchange.headers
+        });
+      } else {
+        response = await axiosInstance.get(`${url}?symbol=${formattedSymbol}`);
+      }
 
       let rate: number | null = null;
       let nextFundingTime: number | undefined;
@@ -139,6 +121,20 @@ export async function GET(request: Request) {
           if (Array.isArray(response.data) && response.data.length > 0) {
             rate = parseFloat(response.data[0].fundingRate);
             nextFundingTime = new Date(response.data[0].intervalEndTimestamp).getTime();
+          }
+          break;
+        case 'hyperliquid':
+          if (Array.isArray(response.data)) {
+            // 查找对应的交易对
+            const marketData = response.data.find((item: [string, any[]]) => item[0] === formattedSymbol);
+            if (marketData && Array.isArray(marketData[1])) {
+              // 查找 BinPerp 的数据
+              const binPerpData = marketData[1].find((item: [string, any]) => item[0] === 'BinPerp');
+              if (binPerpData && binPerpData[1]) {
+                rate = parseFloat(binPerpData[1].fundingRate);
+                nextFundingTime = binPerpData[1].nextFundingTime;
+              }
+            }
           }
           break;
       }
