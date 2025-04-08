@@ -3,36 +3,56 @@ import axios from 'axios';
 import { exchanges } from '@/config/exchanges';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 
-// 代理配置
-const PROXY_CONFIG = {
-  host: process.env.PROXY_HOST,
-  port: parseInt(process.env.PROXY_PORT || '1337'),
-  auth: {
-    username: process.env.PROXY_USERNAME,
-    password: process.env.PROXY_PASSWORD
+// 创建 axios 实例
+const createAxiosInstance = () => {
+  // 只在开发环境使用代理
+  if (process.env.NODE_ENV === 'development') {
+    const PROXY_CONFIG = {
+      host: process.env.PROXY_HOST,
+      port: parseInt(process.env.PROXY_PORT || '1337'),
+      auth: {
+        username: process.env.PROXY_USERNAME,
+        password: process.env.PROXY_PASSWORD
+      }
+    };
+
+    // 创建代理 agent
+    const httpsAgent = new HttpsProxyAgent(`http://${PROXY_CONFIG.auth.username}:${PROXY_CONFIG.auth.password}@${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`);
+
+    return axios.create({
+      httpsAgent,
+      proxy: false,
+      timeout: 30000,
+    });
   }
+
+  // 生产环境不使用代理
+  return axios.create({
+    timeout: 30000,
+  });
 };
 
-// 创建代理 agent
-const httpsAgent = new HttpsProxyAgent(`http://${PROXY_CONFIG.auth.username}:${PROXY_CONFIG.auth.password}@${PROXY_CONFIG.host}:${PROXY_CONFIG.port}`);
+const axiosInstance = createAxiosInstance();
 
-// 创建带有详细日志的 axios 实例
-const axiosInstance = axios.create({
-  httpsAgent,
-  proxy: false,
-  timeout: 30000,
-});
-
+// 添加请求拦截器
 axiosInstance.interceptors.request.use(request => {
   console.log('发送请求:', {
     method: request.method,
     url: request.url,
     headers: request.headers,
-    proxy: PROXY_CONFIG,
+    proxy: process.env.NODE_ENV === 'development' ? {
+      host: process.env.PROXY_HOST,
+      port: process.env.PROXY_PORT,
+      auth: {
+        username: process.env.PROXY_USERNAME,
+        password: '******' // 隐藏密码
+      }
+    } : '不使用代理',
   });
   return request;
 });
 
+// 添加响应拦截器
 axiosInstance.interceptors.response.use(
   response => {
     console.log('收到响应:', {
@@ -51,7 +71,14 @@ axiosInstance.interceptors.response.use(
         url: error.config?.url,
         method: error.config?.method,
         headers: error.config?.headers,
-        proxy: PROXY_CONFIG,
+        proxy: process.env.NODE_ENV === 'development' ? {
+          host: process.env.PROXY_HOST,
+          port: process.env.PROXY_PORT,
+          auth: {
+            username: process.env.PROXY_USERNAME,
+            password: '******' // 隐藏密码
+          }
+        } : '不使用代理',
       },
       response: error.response ? {
         status: error.response.status,
