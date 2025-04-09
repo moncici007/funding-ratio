@@ -77,6 +77,7 @@ export default function Home() {
                   <th className="p-4 border">Bitget</th>
                   <th className="p-4 border">Backpack</th>
                   <th className="p-4 border">Hyperliquid</th>
+                  <th className="p-4 border">Paradex</th>
                   <th className="p-4 border">最大费率差</th>
                 </tr>
               </thead>
@@ -105,6 +106,9 @@ export default function Home() {
                       </td>
                       <td className={`p-4 border ${getRateByExchange(symbol, 'Hyperliquid') !== null ? (getRateByExchange(symbol, 'Hyperliquid')! > 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
                         {getRateByExchange(symbol, 'Hyperliquid') !== null ? `${(getRateByExchange(symbol, 'Hyperliquid')! * 100).toFixed(4)}%` : '-'}
+                      </td>
+                      <td className={`p-4 border ${getRateByExchange(symbol, 'Paradex') !== null ? (getRateByExchange(symbol, 'Paradex')! > 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
+                        {getRateByExchange(symbol, 'Paradex') !== null ? `${(getRateByExchange(symbol, 'Paradex')! * 100).toFixed(4)}%` : '-'}
                       </td>
                       <td className="p-4 border text-green-600">
                         {(maxDiff * 100).toFixed(4)}%

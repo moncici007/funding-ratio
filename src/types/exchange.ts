@@ -16,6 +16,7 @@ export interface ExchangeConfig {
   method?: string;
   headers?: Record<string, string>;
   body?: Record<string, any>;
+  queryParams?: (symbol: string) => string;
 }
 
 export interface ArbitrageOpportunity {

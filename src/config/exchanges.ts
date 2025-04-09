@@ -68,5 +68,18 @@ export const exchanges = {
     body: {
       type: 'predictedFundings'
     }
+  },
+  paradex: {
+    name: 'Paradex',
+    baseUrl: 'https://api.prod.paradex.trade',
+    endpoints: {
+      fundingRate: '/v1/funding/data'
+    },
+    symbolFormat: (symbol: string) => {
+      // 将 BTCUSDT 转换为 BTC-USD-PERP
+      const base = symbol.replace('USDT', '');
+      return `${base}-USD-PERP`;
+    },
+    queryParams: (symbol: string) => `market=${symbol}&page_size=1`
   }
 }; 

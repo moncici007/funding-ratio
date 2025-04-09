@@ -88,7 +88,8 @@ export async function GET(request: Request) {
           headers: exchange.headers
         });
       } else {
-        response = await axiosInstance.get(`${url}?symbol=${formattedSymbol}`);
+        const queryParams = exchange.queryParams ? exchange.queryParams(formattedSymbol) : `symbol=${formattedSymbol}`;
+        response = await axiosInstance.get(`${url}?${queryParams}`);
       }
 
       let rate: number | null = null;
@@ -135,6 +136,13 @@ export async function GET(request: Request) {
                 nextFundingTime = binPerpData[1].nextFundingTime;
               }
             }
+          }
+          break;
+        case 'paradex':
+          if (response.data && response.data.results && response.data.results.length > 0) {
+            const fundingRate = response.data.results[0];
+            rate = parseFloat(fundingRate.funding_rate);
+            nextFundingTime = fundingRate.created_at;
           }
           break;
       }
