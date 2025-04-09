@@ -29,4 +29,19 @@ export function findArbitrageOpportunities(rates: FundingRate[]): ArbitrageOppor
   }
   
   return opportunities.sort((a, b) => b.rateDifference - a.rateDifference);
+}
+
+export async function getTopSymbolsByVolume(limit: number = 30): Promise<string[]> {
+  try {
+    const response = await axios.get('https://api.binance.com/api/v3/ticker/24hr');
+    const symbols = response.data
+      .filter((item: any) => item.symbol.endsWith('USDT'))
+      .sort((a: any, b: any) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
+      .slice(0, limit)
+      .map((item: any) => item.symbol);
+    return symbols;
+  } catch (error) {
+    console.error('Error fetching top symbols:', error);
+    return [];
+  }
 } 
